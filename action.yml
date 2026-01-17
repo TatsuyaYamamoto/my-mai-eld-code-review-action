@@ -1,23 +1,34 @@
-name: 'Code review'
-description: 'Review your PR by @My_Mai_Eld. Powered by Claude Code.'
-
+name: "Code review"
+description: "Review your PR by @My_Mai_Eld. Powered by Claude Code."
 
 inputs:
   anthropic-api-key:
     description: "Anthropic API key"
     required: true
+  my-mized-prompt:
+    description: "If you want my-mai to review it, provide your customized prompt here."
+    default: ""
   show-claude-code-full-output:
     description: "Show full JSON output"
     default: "false"
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
-    - name: Generate user prompt
+    - name: Create system prompt
+      shell: "bash"
+      run: |
+        {
+          cat "${{ github.action_path }}/SYSTEM_PROMPT.md"
+          echo
+          echo "${{ inputs.my-mized-prompt }}"
+        } > "${{ runner.temp }}/SYSTEM_PROMPT.md"
+
+    - name: Create user prompt
       id: user-prompt
       uses: actions/github-script@v8
       with:
-        result-encoding: 'string'
+        result-encoding: "string"
         script: |
           const { run } = await import("${{ github.action_path }}/src/createUserPrompt.ts");
           return run({
@@ -33,8 +44,8 @@ runs:
         anthropic_api_key: "${{ inputs.anthropic-api-key }}"
         claude_args: |
           --model "haiku"
-          --system-prompt "${{ github.action_path }}/SYSTEM_PROMPT.md"
-        prompt: '${{ steps.user-prompt.outputs.result }}'
+          --system-prompt "${{ runner.temp }}/SYSTEM_PROMPT.md"
+        prompt: "${{ steps.user-prompt.outputs.result }}"
 
     - name: Display Claude Code Report
       shell: "bash"
